@@ -1,0 +1,58 @@
+Delete folders: ijcai26-hierarchical-loss-pinns/PINN_project/TwoPhaseDisplacement/data-100-new (2sigm, 3sigm)
+
+from diffusion_equation import compute_solution
+
+# configuration of simulator
+pwat = 2.0
+poil = 4.0
+vr = 0.3
+kwat = 1.0
+koil = 0.3
+
+
+pmin = 0.0
+pmax = 1.0
+nx0 = 50
+nx1 = 30
+nx2 = 1
+dx0 = 1.0 / nx0
+dx1 = 1.0 / nx1
+dx2 = 1.0 / nx2
+dt = 0
+niter = 100
+
+poro = 0.1 + np.zeros((nx0, nx1, nx2))
+perm = np.ones((nx0, nx1, nx2))
+
+
+N = 2000
+
+# simualtion points x, y and t
+# (x_i, y_i) - randomly selected ractangle from uniform distribution 
+# in (50, 30), where x_i - number of int in [0, 49], 
+# y_i - number of int in [0, 30]
+# t_i - randomly selected time in [0, 3]
+x_n = np.random.randint(size=(N, ), low=0, high=50)
+y_n = np.random.randint(size=(N, ), low=0, high=30)
+t_final = 3 * np.random.random(N)
+
+
+# 0 - pres, 1 - swat, 2 - soil
+sim_data = np.zeros((N, 3))
+
+# simulation
+for i in trange(N):
+    pres, swat, soil = compute_solution(perm, poro,
+                                        dx0, dx1, dx2, t_final[i], niter,
+                                        pwat, kwat, poil, koil, vr,
+                                        pmin=0.0, pmax=1.0)
+    sim_data[i, 0] = pres[x_n[i], y_n[i]]
+    sim_data[i, 1] = swat[x_n[i], y_n[i]]
+    sim_data[i, 2] = soil[x_n[i], y_n[i]]
+
+    
+# saving data in file
+np.savetxt(f"sim_{N}.txt", sim_data)
+np.savetxt(f"x_{N}.txt", x_n)
+np.savetxt(f"y_{N}.txt", y_n)
+np.savetxt(f"t_{N}.txt", t_final)
