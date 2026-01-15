@@ -1,0 +1,41 @@
+class PINN(nn.Module):
+    def __init__(self, input_dim=2, hidden_dim=32, num_layers=4, output_dim=1):
+        super().__init__()
+
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
+
+        self.U = nn.Linear(input_dim, hidden_dim)
+        self.V = nn.Linear(input_dim, hidden_dim)
+
+        self.hidden_layers = nn.ModuleList(
+            [nn.Linear(hidden_dim, hidden_dim) for _ in range(num_layers - 1)]
+        )
+
+        self.output_layer = nn.Linear(hidden_dim, output_dim)
+
+        self._initialize_weights()
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_normal_(m.weight, gain=1.0)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+
+    def forward(self, x):
+        U = torch.tanh(self.U(x))
+        V = torch.tanh(self.V(x))
+
+        h = U * V
+
+        for i, layer in enumerate(self.hidden_layers):
+            h_new = torch.relu(layer(h))
+            if i % 2 == 1 and i > 0:
+                h = h + h_new
+            else:
+                h = h_new
+
+        T = self.output_layer(h)
+        return T
